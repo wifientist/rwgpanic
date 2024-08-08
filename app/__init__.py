@@ -36,6 +36,3 @@ def get_info():
     #TODO now 1) figure out which RWG this is, and 2) push this data to an RWG endpoint api there
 
     return result
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port="7777", debug=True)
