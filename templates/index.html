@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Get Network Info</title>
+
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+        #getInfoButton {
+            background-color: red;
+            color: white;
+            font-size: 24px;
+            width: 150px;
+            height: 150px;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s, transform 0.3s, box-shadow 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }        
+        #getInfoButton:hover {
+            background-color: darkred;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+        }
+        #getInfoButton:active {
+            transform: scale(0.95);
+        }
+    </style>
+
+</head>
+<body>
+    <button id="getInfoButton">PANIC!</button>
+
+    <script>
+        function getFingerprint() {
+            return {
+                userAgent: navigator.userAgent,
+                language: navigator.language,
+                platform: navigator.platform,
+                screenResolution: `${screen.width}x${screen.height}`,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                cookiesEnabled: navigator.cookieEnabled,
+                onlineStatus: navigator.onLine,
+                connectionType: (navigator.connection || {}).effectiveType || 'unknown'
+            };
+        }
+
+        async function getLocalIP() {
+            return new Promise((resolve, reject) => {
+                const pc = new RTCPeerConnection({iceServers: []});
+                pc.createDataChannel("");
+                pc.createOffer().then(offer => pc.setLocalDescription(offer));
+                pc.onicecandidate = (ice) => {
+                    if (!ice || !ice.candidate || !ice.candidate.candidate) return;
+                    const ipRegex = /([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})/;
+                    const match = ipRegex.exec(ice.candidate.candidate);
+                    if (match) {
+                        console.log('Local IP found:', match[1]);
+                        resolve(match[1]);
+                    } else {
+                        console.log('No local IP found');
+                        resolve(null);
+                    }
+                };
+                setTimeout(() => {
+                    console.log('Timeout: failed to get local IP');
+                    resolve(null);
+                }, 1000);
+            });
+        }
+
+        document.getElementById('getInfoButton').addEventListener('click', async () => {
+            console.log('Button clicked');
+
+            const fingerprint = getFingerprint();
+            console.log('Fingerprint:', fingerprint);
+
+            const locale = navigator.language;
+            console.log('Locale:', locale);
+
+            let privateIP;
+            try {
+                privateIP = await getLocalIP();
+                console.log('Private IP:', privateIP);
+            } catch (error) {
+                console.error('Error getting local IP:', error);
+                privateIP = null;
+            }
+
+            const platform = navigator.platform;
+            const screenResolution = `${screen.width}x${screen.height}`;
+            const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            const cookiesEnabled = navigator.cookieEnabled;
+            const onlineStatus = navigator.onLine;
+            const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+            const connectionType = connection ? connection.effectiveType : 'unknown';
+            if (connection) {
+              console.log('Effective connection type:', connection.effectiveType);
+              console.log('Downlink:', connection.downlink);
+              console.log('RTT:', connection.rtt);
+              console.log('Save data:', connection.saveData);
+            }
+            const downlink = connection ? connection.downlink : 'unknown';
+            const rtt = connection ? connection.rtt : 'unknown';
+
+            const response = await fetch('/get_info', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    locale: locale,
+                    private_ip: privateIP,
+                    mac_address: 'N/A',  // Placeholder, getting MAC address is complex
+                    platform: platform,
+                    screen_resolution: screenResolution,
+                    timezone: timezone,
+                    cookies_enabled: cookiesEnabled,
+                    online_status: onlineStatus,
+                    connection_type: connectionType,
+                    downlink: downlink,
+                    rtt: rtt
+                })
+            });
+
+            const data = await response.json();
+            console.log('Response data:', data);
+            //alert(`IP Address: ${data['IP Address']}\nMAC Address: ${data['MAC Address']}\nLocale: ${data['Locale']}\nUser Agent: ${data['User Agent']}\nPrivate IP Address: ${data['Private IP Address']}\nPlatform: ${data['Platform']}\nScreen Resolution: ${data['Screen Resolution']}\nTimezone: ${data['Timezone']}\nCookies Enabled: ${data['Cookies Enabled']}\nOnline Status: ${data['Online Status']}\nConnection Type: ${data['Connection Type']}\nDownlink: ${data['Downlink']}\nRTT: ${data['RTT']}`);
+        });
+    </script>
+</body>
+</html>
